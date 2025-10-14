@@ -431,7 +431,7 @@ class DataFetcher:
                 # 检查是否已存在
                 existing = BondYield.query.filter_by(date=date_obj).first()
                 
-                yield_val = row.get('收益率')
+                yield_val = row.get('中国国债收益率10年')
                 if pd.notna(yield_val):
                     yield_val = float(yield_val)
                 else:
