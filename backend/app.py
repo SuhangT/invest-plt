@@ -187,7 +187,7 @@ def update_manual_weight(index_id):
 def get_stock_bond_ratio():
     """获取股债性价比数据"""
     try:
-        days = int(request.args.get('days', 365))
+        days = int(request.args.get('days', 3650))
         start_date = datetime.now().date() - timedelta(days=days)
         
         ratios = StockBondRatio.query.filter(
@@ -275,7 +275,7 @@ def refresh_data():
             for index in favorite_indices:
                 # 获取最近30天数据
                 end_date = datetime.now().strftime('%Y%m%d')
-                start_date = (datetime.now() - timedelta(days=30)).strftime('%Y%m%d')
+                start_date = (datetime.now() - timedelta(days=3650)).strftime('%Y%m%d')
                 
                 fetcher.fetch_index_history(index.code, start_date, end_date)
                 fetcher.fetch_index_constituents(index.code)

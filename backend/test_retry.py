@@ -22,11 +22,11 @@ def test_retry_mechanism():
         print()
         
         # 测试1: 获取指数列表
-        # print("测试1: 获取指数列表")
-        # print("-" * 60)
-        # result = fetcher.fetch_all_indices()
-        # print(f"结果: {'成功' if result else '失败'}")
-        # print()
+        print("测试1: 获取指数列表")
+        print("-" * 60)
+        result = fetcher.fetch_all_indices()
+        print(f"结果: {'成功' if result else '失败'}")
+        print()
         
         # 测试2: 获取指数历史数据（中证800）
         print("测试2: 获取中证800历史数据")
