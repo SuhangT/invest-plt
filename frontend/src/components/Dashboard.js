@@ -1,7 +1,8 @@
 import React from 'react';
-import { TrendingUp, TrendingDown, DollarSign, PieChart } from 'lucide-react';
+import { TrendingUp, TrendingDown, DollarSign, PieChart, Wallet } from 'lucide-react';
 
-const Dashboard = ({ data }) => {
+const Dashboard = ({ data, totalInvestment, onTotalInvestmentChange }) => {
+
   if (!data || !data.stock_bond_ratio) {
     return (
       <div className="bg-dark-surface rounded-xl p-6 border border-dark-border">
@@ -14,6 +15,10 @@ const Dashboard = ({ data }) => {
   const percentile = ratio.percentile_10y || 0;
   const stockAllocation = ratio.stock_allocation || 0;
   const cashAllocation = 100 - stockAllocation;
+
+  // 计算具体金额
+  const stockAmount = (totalInvestment * stockAllocation / 100);
+  const cashAmount = (totalInvestment * cashAllocation / 100);
 
   // 根据分位数计算背景色（绿色低估 → 红色高估）
   const getBackgroundColor = (percentile) => {
@@ -32,6 +37,15 @@ const Dashboard = ({ data }) => {
     return 'text-red-400';
   };
 
+  const formatCurrency = (amount) => {
+    return new Intl.NumberFormat('zh-CN', {
+      style: 'currency',
+      currency: 'CNY',
+      minimumFractionDigits: 0,
+      maximumFractionDigits: 0
+    }).format(amount);
+  };
+
   return (
     <div className={`bg-gradient-to-br ${getBackgroundColor(percentile)} rounded-xl p-6 border border-dark-border fade-in`}>
       <div className="flex items-center justify-between mb-6">
@@ -41,6 +55,24 @@ const Dashboard = ({ data }) => {
         </h2>
         <div className="text-sm text-dark-muted">
           更新时间: {new Date(data.update_time).toLocaleString('zh-CN')}
+        </div>
+      </div>
+
+      {/* 投资总金额输入 */}
+      <div className="mb-6 bg-dark-surface/50 backdrop-blur rounded-lg p-4 border border-dark-border/50">
+        <div className="flex items-center space-x-4">
+          <Wallet className="w-5 h-5 text-blue-400" />
+          <label className="text-sm text-dark-muted">预计投资总金额:</label>
+          <input
+            type="number"
+            value={totalInvestment}
+            onChange={(e) => onTotalInvestmentChange(Number(e.target.value) || 0)}
+            className="flex-1 max-w-xs px-4 py-2 bg-dark-bg border border-dark-border rounded-lg text-dark-text focus:outline-none focus:border-blue-500"
+            placeholder="请输入投资总金额"
+            min="0"
+            step="10000"
+          />
+          <span className="text-dark-text font-medium">{formatCurrency(totalInvestment)}</span>
         </div>
       </div>
 
@@ -83,11 +115,14 @@ const Dashboard = ({ data }) => {
         {/* 股票配置 */}
         <div className="bg-dark-surface/50 backdrop-blur rounded-lg p-4 border border-dark-border/50">
           <div className="flex items-center justify-between mb-2">
-            <span className="text-dark-muted text-sm">股票配置比例</span>
+            <span className="text-dark-muted text-sm">股票配置</span>
             <TrendingUp className="w-4 h-4 text-trade-green" />
           </div>
           <div className="text-2xl font-bold text-trade-green">
             {stockAllocation.toFixed(1)}%
+          </div>
+          <div className="text-lg font-semibold text-trade-green mt-1">
+            {formatCurrency(stockAmount)}
           </div>
           <div className="text-xs text-dark-muted mt-1">
             建议投入指数基金
@@ -97,11 +132,14 @@ const Dashboard = ({ data }) => {
         {/* 现金配置 */}
         <div className="bg-dark-surface/50 backdrop-blur rounded-lg p-4 border border-dark-border/50">
           <div className="flex items-center justify-between mb-2">
-            <span className="text-dark-muted text-sm">现金配置比例</span>
+            <span className="text-dark-muted text-sm">现金配置</span>
             <TrendingDown className="w-4 h-4 text-blue-400" />
           </div>
           <div className="text-2xl font-bold text-blue-400">
             {cashAllocation.toFixed(1)}%
+          </div>
+          <div className="text-lg font-semibold text-blue-400 mt-1">
+            {formatCurrency(cashAmount)}
           </div>
           <div className="text-xs text-dark-muted mt-1">
             保留现金或债券

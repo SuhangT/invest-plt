@@ -206,13 +206,14 @@ class Calculator:
             logger.error(f"计算指数 {index_id} {metric} 分位数失败: {str(e)}")
             return None
     
-    def calculate_stock_bond_ratio(self, date=None):
+    def calculate_stock_bond_ratio(self, date=None, skip_percentile=False):
         """计算股债性价比
         
         股债性价比 = 1/中证800市盈率 - 10年国债收益率
         
         Args:
             date: 日期，默认为最新日期
+            skip_percentile: 是否跳过分位数计算（用于历史数据计算）
             
         Returns:
             dict: 包含计算结果的字典
@@ -234,7 +235,7 @@ class Calculator:
             ).order_by(IndexHistory.date.desc()).first()
             
             if not latest_history or not latest_history.pe_ttm:
-                logger.warning("未找到中证800市盈率数据")
+                logger.warning(f"未找到中证800市盈率数据 (date={date})")
                 return None
             
             # 获取10年国债收益率
@@ -243,7 +244,7 @@ class Calculator:
             ).order_by(BondYield.date.desc()).first()
             
             if not bond_yield or not bond_yield.yield_10y:
-                logger.warning("未找到10年国债收益率数据")
+                logger.warning(f"未找到10年国债收益率数据 (date={date})")
                 return None
             
             # 计算股债性价比
@@ -252,22 +253,22 @@ class Calculator:
             ratio = (1 / pe) - bond_rate
             
             # 计算近10年分位数
-            end_date = date
-            start_date = date - timedelta(days=3650)
-            
-            # 获取历史股债性价比数据
-            historical_ratios = StockBondRatio.query.filter(
-                StockBondRatio.date >= start_date,
-                StockBondRatio.date <= end_date
-            ).all()
-            
-            ratio_values = [r.ratio for r in historical_ratios if r.ratio is not None]
-            ratio_values.append(ratio)  # 包含当前值
-            
-            if len(ratio_values) > 1:
-                percentile = (np.sum(np.array(ratio_values) <= ratio) / len(ratio_values)) * 100
-            else:
-                percentile = 50  # 默认值
+            percentile = 50  # 默认值
+            if not skip_percentile:
+                end_date = date
+                start_date = date - timedelta(days=3650)
+                
+                # 获取历史股债性价比数据
+                historical_ratios = StockBondRatio.query.filter(
+                    StockBondRatio.date >= start_date,
+                    StockBondRatio.date <= end_date
+                ).all()
+                
+                ratio_values = [r.ratio for r in historical_ratios if r.ratio is not None]
+                ratio_values.append(ratio)  # 包含当前值
+                
+                if len(ratio_values) > 1:
+                    percentile = (np.sum(np.array(ratio_values) <= ratio) / len(ratio_values)) * 100
             
             # 股票配置比例 = 分位数
             stock_allocation = percentile
@@ -308,6 +309,71 @@ class Calculator:
             logger.error(f"计算股债性价比失败: {str(e)}")
             db.session.rollback()
             return None
+    
+    def calculate_historical_stock_bond_ratio(self):
+        """计算近10年历史股债性价比数据"""
+        try:
+            logger.info("开始计算近10年历史股债性价比...")
+            
+            # 获取中证800指数
+            csi800 = Index.query.filter_by(code='000906').first()
+            if not csi800:
+                logger.error("未找到中证800指数")
+                return False
+            
+            # 获取近10年的所有历史数据日期
+            end_date = datetime.now().date()
+            start_date = end_date - timedelta(days=3650)
+            
+            # 获取所有有PE数据的日期
+            history_records = IndexHistory.query.filter(
+                IndexHistory.index_id == csi800.id,
+                IndexHistory.date >= start_date,
+                IndexHistory.date <= end_date,
+                IndexHistory.pe_ttm.isnot(None)
+            ).order_by(IndexHistory.date.asc()).all()
+            
+            if not history_records:
+                logger.warning("没有找到中证800历史数据")
+                return False
+            
+            logger.info(f"找到 {len(history_records)} 条历史数据，开始计算...")
+            
+            # 第一遍：计算所有日期的股债性价比（不计算分位数）
+            for record in history_records:
+                self.calculate_stock_bond_ratio(record.date, skip_percentile=True)
+            
+            # 第二遍：重新计算所有日期的分位数
+            logger.info("开始计算分位数...")
+            all_ratios = StockBondRatio.query.filter(
+                StockBondRatio.date >= start_date,
+                StockBondRatio.date <= end_date
+            ).order_by(StockBondRatio.date.asc()).all()
+            
+            for ratio_record in all_ratios:
+                # 获取该日期之前10年的数据
+                lookback_start = ratio_record.date - timedelta(days=3650)
+                
+                historical_ratios = StockBondRatio.query.filter(
+                    StockBondRatio.date >= lookback_start,
+                    StockBondRatio.date <= ratio_record.date
+                ).all()
+                
+                ratio_values = [r.ratio for r in historical_ratios if r.ratio is not None]
+                
+                if len(ratio_values) > 1:
+                    percentile = (np.sum(np.array(ratio_values) <= ratio_record.ratio) / len(ratio_values)) * 100
+                    ratio_record.percentile_10y = percentile
+                    ratio_record.stock_allocation = percentile
+            
+            db.session.commit()
+            logger.info(f"成功计算 {len(all_ratios)} 条历史股债性价比数据")
+            return True
+            
+        except Exception as e:
+            logger.error(f"计算历史股债性价比失败: {str(e)}")
+            db.session.rollback()
+            return False
     
     def calculate_index_metrics(self, index_id, date=None):
         """计算单个指数的所有指标

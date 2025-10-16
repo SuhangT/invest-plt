@@ -1,12 +1,25 @@
 import React, { useState } from 'react';
 import axios from 'axios';
-import { ArrowUp, ArrowDown, Edit2, Save, X, TrendingUp, TrendingDown } from 'lucide-react';
+import { Edit2, Save, X, TrendingUp, TrendingDown } from 'lucide-react';
 
 const API_BASE_URL = 'http://localhost:5000/api';
 
-const IndexTable = ({ data, onDataChange }) => {
+const IndexTable = ({ data, stockBondRatio, totalInvestment, onDataChange }) => {
   const [editingWeight, setEditingWeight] = useState(null);
   const [weightValue, setWeightValue] = useState('');
+
+  // 计算股票配置总金额
+  const stockAllocation = stockBondRatio?.stock_allocation || 0;
+  const stockAmount = (totalInvestment * stockAllocation / 100);
+
+  const formatCurrency = (amount) => {
+    return new Intl.NumberFormat('zh-CN', {
+      style: 'currency',
+      currency: 'CNY',
+      minimumFractionDigits: 0,
+      maximumFractionDigits: 0
+    }).format(amount);
+  };
 
   if (!data || data.length === 0) {
     return (
@@ -83,7 +96,7 @@ const IndexTable = ({ data, onDataChange }) => {
                 指数名称
               </th>
               <th className="px-4 py-3 text-right text-xs font-semibold text-dark-muted uppercase tracking-wider">
-                PE/PB
+                PE
               </th>
               <th className="px-4 py-3 text-right text-xs font-semibold text-dark-muted uppercase tracking-wider">
                 ROE
@@ -99,6 +112,9 @@ const IndexTable = ({ data, onDataChange }) => {
               </th>
               <th className="px-4 py-3 text-right text-xs font-semibold text-dark-muted uppercase tracking-wider">
                 目标仓位
+              </th>
+              <th className="px-4 py-3 text-right text-xs font-semibold text-dark-muted uppercase tracking-wider">
+                配置金额
               </th>
               <th className="px-4 py-3 text-center text-xs font-semibold text-dark-muted uppercase tracking-wider">
                 操作提示
@@ -124,14 +140,14 @@ const IndexTable = ({ data, onDataChange }) => {
                     </div>
                   </td>
 
-                  {/* PE/PB */}
+                  {/* PE */}
                   <td className="px-4 py-4 text-right">
                     <div className="text-sm">
-                      <div className="text-dark-text">
-                        PE: {valuation.pe_ttm ? valuation.pe_ttm.toFixed(2) : '-'}
+                      <div className="text-dark-text font-medium">
+                        {valuation.pe_ttm ? valuation.pe_ttm.toFixed(2) : '-'}
                       </div>
                       <div className="text-dark-muted text-xs">
-                        PB: {valuation.pb ? valuation.pb.toFixed(2) : '-'}
+                        分位: {metrics.pe_percentile ? `${metrics.pe_percentile.toFixed(1)}%` : '-'}
                       </div>
                     </div>
                   </td>
@@ -214,6 +230,18 @@ const IndexTable = ({ data, onDataChange }) => {
                   <td className="px-4 py-4 text-right">
                     <div className="text-lg font-bold text-blue-400">
                       {metrics.target_position ? `${metrics.target_position.toFixed(2)}%` : '-'}
+                    </div>
+                  </td>
+
+                  {/* 配置金额 */}
+                  <td className="px-4 py-4 text-right">
+                    <div className="text-sm">
+                      <div className="text-lg font-bold text-purple-400">
+                        {metrics.target_position ? formatCurrency(stockAmount * metrics.target_position / 100) : '-'}
+                      </div>
+                      <div className="text-xs text-dark-muted mt-1">
+                        基于股票配置
+                      </div>
                     </div>
                   </td>
 

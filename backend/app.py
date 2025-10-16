@@ -331,6 +331,10 @@ def init_data():
         logger.info("4. 获取财务数据...")
         fetcher.fetch_latest_financials()
         
+        # 5. 计算近10年历史股债性价比
+        logger.info("5. 计算近10年历史股债性价比...")
+        calculator.calculate_historical_stock_bond_ratio()
+        
         # 标记为已初始化
         if not config:
             config = SystemConfig(

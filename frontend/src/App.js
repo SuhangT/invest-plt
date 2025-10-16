@@ -15,6 +15,7 @@ function App() {
   const [refreshing, setRefreshing] = useState(false);
   const [dashboardData, setDashboardData] = useState(null);
   const [showIndexSelector, setShowIndexSelector] = useState(false);
+  const [totalInvestment, setTotalInvestment] = useState(100000);
 
   useEffect(() => {
     checkSystemStatus();
@@ -53,11 +54,11 @@ function App() {
     }
   };
 
-  const handleRefreshData = async () => {
+  const handleRefreshData = async (type = 'all') => {
     setRefreshing(true);
     try {
       await axios.post(`${API_BASE_URL}/data/refresh`, {
-        type: 'all'
+        type: type
       });
       await loadDashboardData();
       await checkSystemStatus();
@@ -96,11 +97,17 @@ function App() {
 
       <main className="container mx-auto px-4 py-6 space-y-6">
         {/* 仪表盘 */}
-        <Dashboard data={dashboardData} />
+        <Dashboard 
+          data={dashboardData}
+          totalInvestment={totalInvestment}
+          onTotalInvestmentChange={setTotalInvestment}
+        />
 
         {/* 指数表格 */}
         <IndexTable 
           data={dashboardData?.indices || []}
+          stockBondRatio={dashboardData?.stock_bond_ratio}
+          totalInvestment={totalInvestment}
           onDataChange={loadDashboardData}
         />
       </main>
