@@ -271,14 +271,19 @@ def refresh_data():
             # 刷新指数数据
             logger.info("开始刷新指数数据...")
             favorite_indices = Index.query.filter_by(is_favorite=True).all()
-            
-            for index in favorite_indices:
-                # 获取最近30天数据
+            csi_800 = Index.query.filter_by(code='000906').all()
+            history_indices = favorite_indices + csi_800
+            for index in history_indices:
+                # 获取最近10年数据
                 end_date = datetime.now().strftime('%Y%m%d')
                 start_date = (datetime.now() - timedelta(days=3650)).strftime('%Y%m%d')
-                
+
                 fetcher.fetch_index_history(index.code, start_date, end_date)
                 fetcher.fetch_index_constituents(index.code)
+            # 刷新国债收益率数据
+            logger.info("开始刷新国债收益率...")
+            start_date = (datetime.now() - timedelta(days=3650)).strftime('%Y%m%d')
+            fetcher.fetch_bond_yield(start_date)
         
         if refresh_type in ['all', 'financials']:
             # 刷新财务数据

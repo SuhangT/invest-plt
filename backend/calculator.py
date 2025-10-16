@@ -220,7 +220,7 @@ class Calculator:
         """
         try:
             if not date:
-                date = datetime.now().date()
+                date = (datetime.now() - timedelta(days=1)).date()
             
             # 获取中证800（代码000906）的市盈率
             csi800 = Index.query.filter_by(code='000906').first()
@@ -561,7 +561,7 @@ class Calculator:
         """
         try:
             if not date:
-                date = datetime.now().date()
+                date = (datetime.now() - timedelta(days=1)).date()
             
             logger.info(f"开始执行 {date} 的每日计算...")
             
