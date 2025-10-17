@@ -97,8 +97,6 @@ class DataFetcher:
             if df is False or df is None or df.empty:
                 logger.error("获取指数列表失败")
                 return False
-
-            print(df.shape)
             
             indices = []
             for _, row in df.iterrows():
@@ -305,9 +303,14 @@ class DataFetcher:
     @retry_on_failure(max_retries=10, min_delay=3, max_delay=10)
     def _fetch_financials_data(self, report_date):
         """内部方法：获取财务数据（带重试）"""
-        df = ak.stock_yjbb_em(date=report_date)
-        if df.empty:
+        df1 = ak.stock_lrb_em(date=report_date)
+        df2 = ak.stock_zcfz_em(date=report_date)
+        if df1.empty or df2.empty:
             raise Exception(f"报告期 {report_date} 返回空数据")
+        # 按照股票代码横向合并
+        df1 = df1[['股票代码', '股票简称', '净利润']]
+        df2 = df2[['股票代码', '股东权益合计']]
+        df = pd.merge(df1, df2, on='股票代码')
         return df
     
     def fetch_stock_financials(self, report_date):
@@ -345,35 +348,31 @@ class DataFetcher:
                 ).first()
                 
                 roe_val = row.get('净资产收益率')
+                stock_name = str(row.get('股票简称', '')).strip()
+                net_profit = float(row.get('净利润', 0)) if pd.notna(row.get('净利润')) else None
+                equity = float(row.get('股东权益合计', 0)) if pd.notna(row.get('股东权益合计')) else None
+
                 if pd.notna(roe_val):
                     roe_val = float(roe_val)
                 else:
                     roe_val = None
-                
+
                 if existing:
-                    existing.stock_name = str(row.get('股票简称', '')).strip()
-                    existing.eps = float(row.get('每股收益', 0)) if pd.notna(row.get('每股收益')) else None
-                    existing.revenue = float(row.get('营业总收入-营业总收入', 0)) if pd.notna(row.get('营业总收入-营业总收入')) else None
-                    existing.net_profit = float(row.get('净利润-净利润', 0)) if pd.notna(row.get('净利润-净利润')) else None
-                    existing.bps = float(row.get('每股净资产', 0)) if pd.notna(row.get('每股净资产')) else None
+                    existing.stock_name = stock_name
+                    existing.net_profit = net_profit
+                    existing.equity = equity
                     existing.roe = roe_val
-                    existing.gross_margin = float(row.get('销售毛利率', 0)) if pd.notna(row.get('销售毛利率')) else None
-                    existing.industry = str(row.get('所处行业', '')).strip()
                 else:
                     record = StockFinancial(
                         stock_code=stock_code,
-                        stock_name=str(row.get('股票简称', '')).strip(),
+                        stock_name=stock_name,
                         report_date=date_obj,
-                        eps=float(row.get('每股收益', 0)) if pd.notna(row.get('每股收益')) else None,
-                        revenue=float(row.get('营业总收入-营业总收入', 0)) if pd.notna(row.get('营业总收入-营业总收入')) else None,
-                        net_profit=float(row.get('净利润-净利润', 0)) if pd.notna(row.get('净利润-净利润')) else None,
-                        bps=float(row.get('每股净资产', 0)) if pd.notna(row.get('每股净资产')) else None,
-                        roe=roe_val,
-                        gross_margin=float(row.get('销售毛利率', 0)) if pd.notna(row.get('销售毛利率')) else None,
-                        industry=str(row.get('所处行业', '')).strip()
+                        net_profit=net_profit,
+                        equity=equity,
+                        roe=roe_val
                     )
                     records.append(record)
-            
+
             if records:
                 db.session.bulk_save_objects(records)
             
@@ -462,19 +461,19 @@ class DataFetcher:
     def fetch_latest_financials(self):
         """获取最新季度财务数据"""
         try:
-            # 获取最近4个季度的财务数据
+            # 获取最近5个季度的财务数据
             now = datetime.now()
             year = now.year
             
             # 确定最近的报告期
             if now.month >= 10:
-                quarters = [f"{year}0930", f"{year}0630", f"{year}0331", f"{year-1}1231"]
+                quarters = [f"{year}0930", f"{year}0630", f"{year}0331", f"{year-1}1231", f"{year-1}0930"]
             elif now.month >= 7:
-                quarters = [f"{year}0630", f"{year}0331", f"{year-1}1231", f"{year-1}0930"]
+                quarters = [f"{year}0630", f"{year}0331", f"{year-1}1231", f"{year-1}0930", f"{year-1}0630"]
             elif now.month >= 4:
-                quarters = [f"{year}0331", f"{year-1}1231", f"{year-1}0930", f"{year-1}0630"]
+                quarters = [f"{year}0331", f"{year-1}1231", f"{year-1}0930", f"{year-1}0630", f"{year-1}0331"]
             else:
-                quarters = [f"{year-1}1231", f"{year-1}0930", f"{year-1}0630", f"{year-1}0331"]
+                quarters = [f"{year-1}1231", f"{year-1}0930", f"{year-1}0630", f"{year-1}0331", f"{year-2}1231"]
             
             for quarter in quarters:
                 self.fetch_stock_financials(quarter)

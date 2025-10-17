@@ -94,13 +94,9 @@ class StockFinancial(db.Model):
     stock_code = db.Column(db.String(20), nullable=False, index=True)
     stock_name = db.Column(db.String(100))
     report_date = db.Column(db.Date, nullable=False, index=True)  # 报告期
-    eps = db.Column(db.Float)  # 每股收益
-    revenue = db.Column(db.Float)  # 营业总收入
     net_profit = db.Column(db.Float)  # 净利润
-    bps = db.Column(db.Float)  # 每股净资产
+    equity = db.Column(db.Float)  # 净资产
     roe = db.Column(db.Float)  # 净资产收益率（%）
-    gross_margin = db.Column(db.Float)  # 销售毛利率（%）
-    industry = db.Column(db.String(100))  # 所处行业
     
     __table_args__ = (
         db.UniqueConstraint('stock_code', 'report_date', name='uix_stock_report'),
