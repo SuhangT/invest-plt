@@ -108,26 +108,52 @@ class Calculator:
             weighted_roe_sum = 0
             
             for constituent in constituents:
-                # 获取该股票近五季度的财务数据
+                # 获取该股票近五季度的财务数据（按报告期降序排列）
                 financial = StockFinancial.query.filter_by(
                     stock_code=constituent.stock_code
                 ).order_by(StockFinancial.report_date.desc()).all()[:5]
 
-                # 计算net_profit总和（处理None）
-                total_net_profit = sum(
-                    item.net_profit if item.net_profit is not None else 0
-                    for item in financial
-                )
+                # 需要至少5个季度的数据来计算4个单季度净利润
+                if len(financial) < 5:
+                    continue
+                
+                # 计算单季度净利润（累计净利润相减）
+                # financial[0]是最新季度，financial[4]是最老季度
+                single_quarter_profits = []
+                for i in range(4):
+                    current_profit = financial[i].net_profit
+                    previous_profit = financial[i+1].net_profit if financial[i].report_date.month != 3 else 0
+                    
+                    # 如果当前季度或上一季度数据缺失，跳过
+                    if current_profit is None or previous_profit is None:
+                        continue
+                    
+                    # 单季度净利润 = 本季度累计 - 上季度累计
+                    single_quarter_profit = current_profit - previous_profit
+                    single_quarter_profits.append(single_quarter_profit)
+                
+                # 如果没有足够的单季度数据，跳过该股票
+                if len(single_quarter_profits) < 4:
+                    continue
+                
+                # 计算近四季度单季度净利润之和
+                total_net_profit = sum(single_quarter_profits)
 
-                # 计算equity平均值（处理None和空列表）
-                equity_values = [item.equity for item in financial if item.equity is not None]
+                
+                # 计算近四季度所有者权益的均值（使用最新的4个季度）
+                equity_values = [financial[i].equity for i in range(4) if financial[i].equity is not None]
                 avg_equity = sum(equity_values) / len(equity_values) if equity_values else None
-
+                
+                # 计算ROE
                 weight = constituent.weight if constituent.weight else 0
-                roe = total_net_profit / avg_equity if avg_equity is not None else None
+                if avg_equity is not None and avg_equity > 0:
+                    roe = (total_net_profit / avg_equity) * 100  # 转换为百分比
+                    print(f'{constituent.stock_name} 总利润: {total_net_profit}, 权益: {avg_equity}, ROE: {roe}%')
+                    weighted_roe_sum += roe * weight
 
-                weighted_roe_sum += roe * weight
-                total_weight += weight
+                    total_weight += weight
+                else:
+                    print(f'{constituent.stock_name} 总利润: {total_net_profit}, 权益: {avg_equity}')
             
             if total_weight == 0:
                 return None

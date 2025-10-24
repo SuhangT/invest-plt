@@ -475,18 +475,15 @@ class DataFetcher:
             else:
                 quarters = [f"{year-1}1231", f"{year-1}0930", f"{year-1}0630", f"{year-1}0331", f"{year-2}1231", f"{year-2}0930"]
 
-            for quarter in quarters:
-                self.fetch_stock_financials(quarter)
-                self._random_delay()
             # 检查财务数据是否已存在
-            # exist_item = StockFinancial.query.first()
-            # if exist_item:
-            #     self.fetch_stock_financials(quarters[0])
-            #     self._random_delay()
-            # else:
-            #     for quarter in quarters:
-            #         self.fetch_stock_financials(quarter)
-            #         self._random_delay()
+            exist_item = StockFinancial.query.first()
+            if exist_item:
+                self.fetch_stock_financials(quarters[0])
+                self._random_delay()
+            else:
+                for quarter in quarters:
+                    self.fetch_stock_financials(quarter)
+                    self._random_delay()
             
             return True
             
