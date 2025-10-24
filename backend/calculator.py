@@ -4,6 +4,7 @@ from datetime import datetime, timedelta
 from models import (db, Index, IndexHistory, IndexConstituent, StockFinancial, 
                     BondYield, CalculatedMetrics, StockBondRatio)
 import logging
+from sqlalchemy import func, extract, case
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -81,54 +82,50 @@ class Calculator:
             float: 加权ROE
         """
         try:
-            if not date:
-                # 获取最新成份股日期
-                latest_constituent = IndexConstituent.query.filter_by(
-                    index_id=index_id
-                ).order_by(IndexConstituent.date.desc()).first()
-                
-                if not latest_constituent:
-                    return None
-                
-                date = latest_constituent.date
+
+            # 获取最新成份股日期
+            latest_constituent = IndexConstituent.query.filter_by(
+                index_id=index_id
+            ).order_by(IndexConstituent.date.desc()).first()
+
+            if not latest_constituent:
+                return None
+
+            # 获取成分股更新的最新日期
+            cons_date = latest_constituent.date
             
             # 获取成份股列表
             constituents = IndexConstituent.query.filter_by(
                 index_id=index_id,
-                date=date
+                date=cons_date
             ).all()
             
             if not constituents:
                 return None
-            
-            # 获取最新财务数据（最近一个季度）
-            latest_report = StockFinancial.query.order_by(
-                StockFinancial.report_date.desc()
-            ).first()
-            
-            if not latest_report:
-                return None
-            
-            report_date = latest_report.report_date
             
             # 计算加权ROE
             total_weight = 0
             weighted_roe_sum = 0
             
             for constituent in constituents:
-                # 获取该股票的财务数据
+                # 获取该股票近五季度的财务数据
                 financial = StockFinancial.query.filter_by(
-                    stock_code=constituent.stock_code,
-                    report_date=report_date
-                ).first()
-                
-                if not financial or financial.roe is None:
-                    # 非A股或无ROE数据，跳过
-                    continue
-                
+                    stock_code=constituent.stock_code
+                ).order_by(StockFinancial.report_date.desc()).all()[:5]
+
+                # 计算net_profit总和（处理None）
+                total_net_profit = sum(
+                    item.net_profit if item.net_profit is not None else 0
+                    for item in financial
+                )
+
+                # 计算equity平均值（处理None和空列表）
+                equity_values = [item.equity for item in financial if item.equity is not None]
+                avg_equity = sum(equity_values) / len(equity_values) if equity_values else None
+
                 weight = constituent.weight if constituent.weight else 0
-                roe = financial.roe if financial.roe else 0
-                
+                roe = total_net_profit / avg_equity if avg_equity is not None else None
+
                 weighted_roe_sum += roe * weight
                 total_weight += weight
             
@@ -412,6 +409,7 @@ class Calculator:
             percentile_range, initial_score = self.get_percentile_range_and_score(main_percentile)
             
             # 计算加权ROE
+            logger.info('开始计算加权ROE')
             weighted_roe = self.calculate_index_weighted_roe(index_id, date)
             
             # 计算ROE权重

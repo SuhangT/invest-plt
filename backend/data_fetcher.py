@@ -324,7 +324,7 @@ class DataFetcher:
             
             # 调用akshare接口（带重试）
             df = self._fetch_financials_data(report_date)
-            
+            print(f'{report_date}财务数据抓取成功')
             if df is False or df is None:
                 logger.error(f"报告期 {report_date} 财务数据获取失败")
                 return False
@@ -461,23 +461,32 @@ class DataFetcher:
     def fetch_latest_financials(self):
         """获取最新季度财务数据"""
         try:
-            # 获取最近5个季度的财务数据
+            # 获取最近6个季度的财务数据
             now = datetime.now()
             year = now.year
             
             # 确定最近的报告期
             if now.month >= 10:
-                quarters = [f"{year}0930", f"{year}0630", f"{year}0331", f"{year-1}1231", f"{year-1}0930"]
+                quarters = [f"{year}0930", f"{year}0630", f"{year}0331", f"{year-1}1231", f"{year-1}0930", f"{year-1}0630"]
             elif now.month >= 7:
-                quarters = [f"{year}0630", f"{year}0331", f"{year-1}1231", f"{year-1}0930", f"{year-1}0630"]
+                quarters = [f"{year}0630", f"{year}0331", f"{year-1}1231", f"{year-1}0930", f"{year-1}0630", f"{year-1}0331"]
             elif now.month >= 4:
-                quarters = [f"{year}0331", f"{year-1}1231", f"{year-1}0930", f"{year-1}0630", f"{year-1}0331"]
+                quarters = [f"{year}0331", f"{year-1}1231", f"{year-1}0930", f"{year-1}0630", f"{year-1}0331", f"{year-2}1231"]
             else:
-                quarters = [f"{year-1}1231", f"{year-1}0930", f"{year-1}0630", f"{year-1}0331", f"{year-2}1231"]
-            
+                quarters = [f"{year-1}1231", f"{year-1}0930", f"{year-1}0630", f"{year-1}0331", f"{year-2}1231", f"{year-2}0930"]
+
             for quarter in quarters:
                 self.fetch_stock_financials(quarter)
                 self._random_delay()
+            # 检查财务数据是否已存在
+            # exist_item = StockFinancial.query.first()
+            # if exist_item:
+            #     self.fetch_stock_financials(quarters[0])
+            #     self._random_delay()
+            # else:
+            #     for quarter in quarters:
+            #         self.fetch_stock_financials(quarter)
+            #         self._random_delay()
             
             return True
             

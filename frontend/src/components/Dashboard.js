@@ -22,19 +22,19 @@ const Dashboard = ({ data, totalInvestment, onTotalInvestmentChange }) => {
 
   // 根据分位数计算背景色（绿色低估 → 红色高估）
   const getBackgroundColor = (percentile) => {
-    if (percentile < 20) return 'from-green-900/30 to-green-800/20';
-    if (percentile < 40) return 'from-green-800/20 to-yellow-900/20';
-    if (percentile < 60) return 'from-yellow-900/20 to-orange-900/20';
-    if (percentile < 80) return 'from-orange-900/20 to-red-900/20';
-    return 'from-red-900/30 to-red-800/20';
+    if (percentile < 20) return 'from-orange-900/20 to-red-900/20';
+    if (percentile < 40) return 'from-yellow-900/20 to-orange-900/20';
+    if (percentile < 60) return 'from-green-800/20 to-yellow-900/20';
+    if (percentile < 80) return 'from-green-900/30 to-green-800/20';
+    return 'from-green-900/30 to-green-800/20';
   };
 
   const getTextColor = (percentile) => {
-    if (percentile < 20) return 'text-green-400';
-    if (percentile < 40) return 'text-green-300';
-    if (percentile < 60) return 'text-yellow-400';
-    if (percentile < 80) return 'text-orange-400';
-    return 'text-red-400';
+    if (percentile < 20) return 'text-orange-400';
+    if (percentile < 40) return 'text-yellow-400';
+    if (percentile < 60) return 'text-green-300';
+    if (percentile < 80) return 'text-green-400';
+    return 'text-green-400';
   };
 
   const formatCurrency = (amount) => {
@@ -94,19 +94,19 @@ const Dashboard = ({ data, totalInvestment, onTotalInvestmentChange }) => {
         {/* 分位数 */}
         <div className="bg-dark-surface/50 backdrop-blur rounded-lg p-4 border border-dark-border/50">
           <div className="flex items-center justify-between mb-2">
-            <span className="text-dark-muted text-sm">近10年分位数</span>
+            <span className="text-dark-muted text-sm">当前市场温度</span>
             <DollarSign className="w-4 h-4 text-purple-400" />
           </div>
           <div className={`text-2xl font-bold ${getTextColor(percentile)}`}>
-            {percentile.toFixed(1)}%
+            {100 - percentile.toFixed(1)}℃
           </div>
           <div className="mt-2">
             <div className="w-full bg-dark-border rounded-full h-2">
               <div
                 className={`h-2 rounded-full transition-all duration-500 ${
-                  percentile < 50 ? 'bg-gradient-to-r from-green-500 to-yellow-500' : 'bg-gradient-to-r from-orange-500 to-red-500'
+                  (100 - percentile) < 50 ? 'bg-gradient-to-r from-green-500 to-yellow-500' : 'bg-gradient-to-r from-orange-500 to-red-500'
                 }`}
-                style={{ width: `${percentile}%` }}
+                style={{ width: `${100 - percentile}%` }}
               />
             </div>
           </div>

@@ -8,3 +8,7 @@
 
 1. 以app.py为入口，从/api/data/init开始
    目前已修复至第4步财务数据部分，即将修复第5步计算股债性价比部分
+
+20251020
+
+1.修复完app.py，中/api/data/init接口，即将修复/api/data/refresh接口

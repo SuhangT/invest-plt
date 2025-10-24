@@ -1,4 +1,5 @@
-import akshare as ak
+from datetime import datetime
 
-bond_zh_us_rate_df = ak.bond_zh_us_rate(start_date="19901219")
-print(bond_zh_us_rate_df)
+date_obj = datetime.strptime('2025-09-20', '%Y-%m-%d').date()
+print(date_obj.month)
+print(type(date_obj))
