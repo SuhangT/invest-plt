@@ -1,5 +1,5 @@
-from datetime import datetime
+import akshare as ak
 
-date_obj = datetime.strptime('2025-09-20', '%Y-%m-%d').date()
-print(date_obj.month)
-print(type(date_obj))
+stock_profit_forecast_em_df = ak.stock_profit_forecast_em()
+print(stock_profit_forecast_em_df)
+print(stock_profit_forecast_em_df.columns)

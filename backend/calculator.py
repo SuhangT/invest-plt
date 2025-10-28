@@ -448,12 +448,11 @@ class Calculator:
             composite_weight = roe_weight * manual_weight
             composite_score = initial_score * composite_weight
             
-            # 检查操作信号（需要前一日数据）
+            # 检查操作信号（需要前一期数据）
             previous_date = date - timedelta(days=1)
             previous_metrics = CalculatedMetrics.query.filter_by(
-                index_id=index_id,
-                date=previous_date
-            ).first()
+                index_id=index_id
+            ).order_by(CalculatedMetrics.date.desc()).first()
             
             operation_signal = None
             operation_percent = None
@@ -502,7 +501,8 @@ class Calculator:
                 index_id=index_id,
                 date=date
             ).first()
-            
+
+            # 如果数据已存在，就替换之前的数据
             if existing:
                 for key, value in result.items():
                     if key not in ['index_id', 'date']:
@@ -546,12 +546,17 @@ class Calculator:
         try:
             if not date:
                 date = datetime.now().date()
-            
-            # 获取所有自选指数的计算指标
-            metrics = CalculatedMetrics.query.join(Index).filter(
-                CalculatedMetrics.date == date,
-                Index.is_favorite == True
-            ).all()
+
+            favorite_indices = Index.query.filter_by(is_favorite=True).all()
+
+            # 获取所有自选指数的最新的计算指标
+            metrics = []
+            for index in favorite_indices:
+                latest_metrics = CalculatedMetrics.query.filter_by(
+                    index_id=index.id
+                ).order_by(CalculatedMetrics.date.desc()).first()
+
+                metrics.append(latest_metrics)
             
             if not metrics:
                 logger.warning("无自选指数计算数据")
